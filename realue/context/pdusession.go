@@ -28,7 +28,8 @@ type PduSession struct {
 	WriteGnbChan     chan common.InterfaceMessage
 	DefaultAs        string
 	PduSessType      models.PduSessionType
-	PduAddress       net.IP
+	PduAddress       net.IP // the IPv4 address of an IPv4 or IPv4v6 session
+	Ipv6InterfaceId  []byte // the 8-octet IPv6 interface identifier of an IPv6 or IPv4v6 session
 	GenWg            sync.WaitGroup
 	PktCount         int
 	SeqNum           int

@@ -70,6 +70,10 @@ func sendIcmpEchoRequest(pduSess *realuectx.PduSession, stop <-chan struct{}) (e
 	if pduSess.WriteGnbChan == nil {
 		return fmt.Errorf("pdu session %d is not connected to a gNB", pduSess.PduSessId)
 	}
+	// an IPv6-only session has no IPv4 address to send the IPv4 echo request from
+	if pduSess.PduAddress.To4() == nil {
+		return fmt.Errorf("pdu session %d has no IPv4 address", pduSess.PduSessId)
+	}
 	pduSess.Log.Debugln("sending UL ICMP ping message")
 
 	icmpPayload, err := hex.DecodeString("8c870d0000000000101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334353637")
