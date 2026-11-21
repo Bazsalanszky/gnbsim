@@ -141,6 +141,9 @@ type Profile struct {
 	WithholdModificationComplete bool         `yaml:"withholdModificationComplete" json:"withholdModificationComplete"`
 	ModificationRequestType      uint8        `yaml:"modificationRequestType" json:"modificationRequestType"`
 	OmitModificationRequestType  bool         `yaml:"omitModificationRequestType" json:"omitModificationRequestType"`
+	// PduSessionRejectCause is the 5GSM cause the network must reject the PDU session
+	// establishment with. Zero, the default, expects an accept.
+	PduSessionRejectCause uint8 `yaml:"pduSessionRejectCause" json:"pduSessionRejectCause"`
 }
 
 func init() {

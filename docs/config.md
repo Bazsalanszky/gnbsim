@@ -203,6 +203,20 @@ SPDX-License-Identifier: Apache-2.0
 
     All of these appear commented out in [gNBSim config](../config/gnbsim.yaml).
 
+- **Expected PDU session reject**
+    A profile can test how the network refuses a PDU session, for instance a session type or
+    DNN the subscription does not allow:
+
+        pduSessionRejectCause: 51 # the 5GSM cause (TS 24.501 table 9.11.4.2.1) the network must
+                                  # reject the PDU SESSION ESTABLISHMENT REQUEST with. The
+                                  # procedure then passes on that reject, and fails on an accept
+                                  # or another cause. Default 0: expect an accept
+
+    Nothing follows a rejected session, so this belongs in a custom profile whose iteration
+    goes on with a procedure that needs none. An example is
+    `"1": "REGISTRATION-PROCEDURE 5"`, `"2": "PDU-SESSION-ESTABLISHMENT-PROCEDURE 5"` and
+    `"3": "UE-INITIATED-DEREGISTRATION-PROCEDURE 5"`. The cause of every reject is logged.
+
 ## Description of Each Profile
 
 Currently following profiles are supported :

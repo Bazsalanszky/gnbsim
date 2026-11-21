@@ -98,6 +98,8 @@ configuration:
       #modificationRequestType: 5          # Request type IE on a UE requested modification
       #omitModificationRequestType: false  # Leave the Request type IE out altogether. Overrides
       #                                     # modificationRequestType rather than combining with it
+      #pduSessionRejectCause: 0           # 5GSM cause the PDU session must be rejected with;
+      #                                     # 0 (default) expects an accept
       dnn: "internet"
       sNssai:
         sst: 1 # Slice/Service Type (unsigned integer, range: 0~255)
