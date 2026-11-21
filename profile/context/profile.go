@@ -119,6 +119,7 @@ type Profile struct {
 	Name                         string         `yaml:"profileName" json:"profileName"`
 	ProfileType                  string         `yaml:"profileType" json:"profileType"`
 	Dnn                          string         `yaml:"dnn" json:"dnn"`
+	PduSessionType               string         `yaml:"pduSessionType" json:"pduSessionType"`
 	StartIteration               string         `yaml:"startiteration" json:"startiteration"`
 	Key                          string         `yaml:"key" json:"key"`
 	DefaultAs                    string         `yaml:"defaultAs" json:"defaultAs"`
@@ -140,6 +141,7 @@ type Profile struct {
 	RetransMsg                   bool         `yaml:"retransMsg" json:"retransMsg"`
 	WithholdModificationComplete bool         `yaml:"withholdModificationComplete" json:"withholdModificationComplete"`
 	ModificationRequestType      uint8        `yaml:"modificationRequestType" json:"modificationRequestType"`
+	NasPduSessionType            uint8        `yaml:"-" json:"-"` // PduSessionType as the NAS value, set by Init
 	OmitModificationRequestType  bool         `yaml:"omitModificationRequestType" json:"omitModificationRequestType"`
 }
 
@@ -407,6 +409,12 @@ func (profile *Profile) Init() error {
 	if profile.PerUserTimeout == 0 {
 		profile.PerUserTimeout = PER_USER_TIMEOUT
 	}
+
+	sessionType, typeErr := ParsePduSessionType(profile.PduSessionType)
+	if typeErr != nil {
+		return typeErr
+	}
+	profile.NasPduSessionType = sessionType
 
 	if profile.UeCount < 0 {
 		return fmt.Errorf("ueCount must not be negative, got %d", profile.UeCount)

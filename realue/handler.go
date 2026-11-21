@@ -213,8 +213,8 @@ func HandlePduSessEstRequestEvent(ue *realuectx.RealUe,
 	// 	Sst: 1,
 	// 	Sd:  "010203",
 	// }
-	nasPdu, err := realue_nas.GetUlNasTransportPduSessionEstablishmentRequest(10,
-		nasMessage.ULNASTransportRequestTypeInitialRequest, ue.Dnn, ue.SNssai)
+	nasPdu, err := realue_nas.GetUlNasTransportPduSessionEstablishmentRequestWithType(10,
+		nasMessage.ULNASTransportRequestTypeInitialRequest, ue.Dnn, ue.SNssai, ue.RequestedPduSessionType())
 	if err != nil {
 		return fmt.Errorf("build PDU session establishment request: %w", err)
 	}

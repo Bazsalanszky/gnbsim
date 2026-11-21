@@ -58,6 +58,7 @@ type RealUe struct {
 	DLCountInUse                bool
 	NonSwitchOffDeregPending    bool
 	ModificationRequestType     uint8
+	PduSessionType              uint8 // the NAS PDU session type value the UE requests
 	OmitModificationRequestType bool
 }
 
@@ -420,4 +421,13 @@ func (ue *RealUe) OnlyPduSession() (int64, *PduSession, error) {
 		return id, sess, nil
 	}
 	return 0, nil, fmt.Errorf("unreachable")
+}
+
+// RequestedPduSessionType is the PDU session type value the UE asks for: PduSessionType, or IPv4
+// when it is not set.
+func (ue *RealUe) RequestedPduSessionType() uint8 {
+	if ue.PduSessionType == 0 {
+		return nasMessage.PDUSessionTypeIPv4
+	}
+	return ue.PduSessionType
 }

@@ -152,6 +152,7 @@ configuration:
       key: "5122250214c33e723a5dd523fc145fc0"
       sequenceNumber: "16f3b3f70fc2"
       dnn: "internet"
+      # pduSessionType: IPv4 # IPv4 (default), IPv6 or IPv4v6; Ethernet and Unstructured only to test a reject
       sNssai:
         sst: 1 # Slice/Service Type (unsigned integer, range: 0~255)
         sd: "010203" # Slice Differentiator (3 bytes hex string, range: 000000~FFFFFF)
