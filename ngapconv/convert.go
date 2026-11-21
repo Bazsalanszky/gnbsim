@@ -241,3 +241,13 @@ func IPAddressToNgap(ipv4, ipv6 string) ngapType.TransportLayerAddress {
 	}
 	return ngapType.TransportLayerAddress{Value: aper.BitString{Bytes: bytes, BitLength: bitLength}}
 }
+
+// IPAddressToNgapOneFamily converts one address of either family to a transport-layer address: 32
+// bits for IPv4, 128 bits for IPv6. Anything that is not an IPv6 address is passed on as IPv4, as
+// IPAddressToNgap(ip, "") would take it.
+func IPAddressToNgapOneFamily(ip string) ngapType.TransportLayerAddress {
+	if parsed := net.ParseIP(ip); parsed != nil && parsed.To4() == nil {
+		return IPAddressToNgap("", ip)
+	}
+	return IPAddressToNgap(ip, "")
+}

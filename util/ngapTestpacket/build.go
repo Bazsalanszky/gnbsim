@@ -19,14 +19,12 @@ import (
 var TestPlmn ngapType.PLMNIdentity
 
 type PduSession struct {
+	GnbN3Ip        string
 	SuccessQfiList []int64
 	FailedQfiList  []int64
 	PduSessId      int64
 	Teid           uint32
-
-	/* indicates whether  the pdu session was successfully established in Real
-	   UE or not*/
-	Success bool
+	Success        bool
 }
 
 func init() {
@@ -602,8 +600,10 @@ func GetPDUSessionResourceSetupUnsuccessfulTransfer() []byte {
 	return encodeData
 }
 
+// buildPDUSessionResourceSetupResponseTransfer gives the downlink tunnel the session's own gNB N3
+// address, or n3Ip when the session has none, of either family.
 func buildPDUSessionResourceSetupResponseTransfer(pduSession *PduSession,
-	ipv4 string,
+	n3Ip string,
 ) (data ngapType.PDUSessionResourceSetupResponseTransfer) {
 	// QoS Flow per TNL Information
 	qosFlowPerTNLInformation := &data.DLQosFlowPerTNLInformation
@@ -616,7 +616,10 @@ func buildPDUSessionResourceSetupResponseTransfer(pduSession *PduSession,
 	teidOct := make([]byte, 4)
 	binary.BigEndian.PutUint32(teidOct, pduSession.Teid)
 	upTransportLayerInformation.GTPTunnel.GTPTEID.Value = teidOct
-	upTransportLayerInformation.GTPTunnel.TransportLayerAddress = ngapconv.IPAddressToNgap(ipv4, "")
+	if pduSession.GnbN3Ip != "" {
+		n3Ip = pduSession.GnbN3Ip
+	}
+	upTransportLayerInformation.GTPTunnel.TransportLayerAddress = ngapconv.IPAddressToNgapOneFamily(n3Ip)
 
 	// Associated QoS Flow List in QoS Flow per TNL Information
 	associatedQosFlowList := &qosFlowPerTNLInformation.AssociatedQosFlowList
@@ -635,8 +638,8 @@ func buildPDUSessionResourceReleaseResponseTransfer() (data ngapType.PDUSessionR
 	return data
 }
 
-func GetPDUSessionResourceSetupResponseTransfer(pduSession *PduSession, ipv4 string) []byte {
-	data := buildPDUSessionResourceSetupResponseTransfer(pduSession, ipv4)
+func GetPDUSessionResourceSetupResponseTransfer(pduSession *PduSession, n3Ip string) []byte {
+	data := buildPDUSessionResourceSetupResponseTransfer(pduSession, n3Ip)
 	encodeData, err := aper.MarshalWithParams(data, "valueExt")
 	if err != nil {
 		logger.UtilLog.Fatalf("aper MarshalWithParams error in GetPDUSessionResourceSetupResponseTransfer: %+v", err)

@@ -28,7 +28,9 @@ SPDX-License-Identifier: Apache-2.0
             gnb1:
               n2IpAddr: # gNB N2 interface IP address used to connect to AMF
               n2Port: 9487 # gNB N2 Port used to connect to AMF
-              n3IpAddr: 192.168.251.5 # gNB N3 interface IP address used to connect to UPF
+              n3IpAddr: 192.168.251.5 # gNB N3 interface IP address used to connect to UPF (IPv4 or IPv6)
+              # n3Ipv6Addr: 2001:db8:251::5 # optional IPv6 N3 address next to an IPv4 n3IpAddr (dual-stack N3)
+              # n3PreferredFamily: ipv4 # ipv4 (default) or ipv6: the family the gNB picks when the UPF offers both
               n3Port: 2152 # gNB N3 Port used to connect to UPF
               name: gnb1 # gNB name that uniquely identifies a gNB within application
               globalRanId:

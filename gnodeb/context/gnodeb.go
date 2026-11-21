@@ -18,6 +18,8 @@ type GNodeB struct {
 	// TODO IP and port should be the property of transport var
 	GnbN2Ip              string                 `yaml:"n2IpAddr"`
 	GnbN3Ip              string                 `yaml:"n3IpAddr"`
+	GnbN3Ipv6            string                 `yaml:"n3Ipv6Addr"`
+	N3PreferredFamily    string                 `yaml:"n3PreferredFamily"`
 	GnbName              string                 `yaml:"name"`
 	RanId                models.GlobalRanNodeId `yaml:"globalRanId"`
 	GnbUes               *GnbUeDao
@@ -51,12 +53,14 @@ type GNodeB struct {
 }
 
 type gNodeBConfig struct {
-	GnbN2Ip         string              `yaml:"n2IpAddr"`
-	GnbN3Ip         string              `yaml:"n3IpAddr"`
-	GnbName         string              `yaml:"name"`
-	RanId           globalRanNodeIDYAML `yaml:"globalRanId"`
-	DefaultAmf      *GnbAmf             `yaml:"defaultAmf"`
-	SupportedTaList []SupportedTA       `yaml:"supportedTaList"`
+	GnbN2Ip           string              `yaml:"n2IpAddr"`
+	GnbN3Ip           string              `yaml:"n3IpAddr"`
+	GnbN3Ipv6         string              `yaml:"n3Ipv6Addr"`
+	N3PreferredFamily string              `yaml:"n3PreferredFamily"`
+	GnbName           string              `yaml:"name"`
+	RanId             globalRanNodeIDYAML `yaml:"globalRanId"`
+	DefaultAmf        *GnbAmf             `yaml:"defaultAmf"`
+	SupportedTaList   []SupportedTA       `yaml:"supportedTaList"`
 
 	// Kept in step with GNodeB: the yaml tags on GNodeB itself are decorative, because
 	// UnmarshalYAML below decodes into this struct and copies field by field. A field added to
@@ -100,6 +104,8 @@ func (gnb *GNodeB) UnmarshalYAML(value *yaml.Node) error {
 
 	gnb.GnbN2Ip = config.GnbN2Ip
 	gnb.GnbN3Ip = config.GnbN3Ip
+	gnb.GnbN3Ipv6 = config.GnbN3Ipv6
+	gnb.N3PreferredFamily = config.N3PreferredFamily
 	gnb.GnbName = config.GnbName
 	gnb.RanId = config.RanId.toModel()
 	gnb.DefaultAmf = config.DefaultAmf
