@@ -203,6 +203,28 @@ SPDX-License-Identifier: Apache-2.0
 
     All of these appear commented out in [gNBSim config](../config/gnbsim.yaml).
 
+- **IPv6 and IPv4v6 PDU sessions**
+    The PDU session type the UE requests is configured per profile. IPv4 is the default and
+    sends what gNBSim has always sent.
+
+        pduSessionType: IPv4v6        # IPv4 (default), IPv6 or IPv4v6. Ethernet and Unstructured
+                                      # are requested as configured, to test how the network
+                                      # refuses them: the UE has no user plane for either
+        defaultAs: "192.168.250.1"    # destination of the IPv4 echo requests
+        defaultAsV6: "2001:db8::1"    # destination of the IPv6 echo requests. Needed by IPv6
+                                      # and IPv4v6, as there is no address to default to
+
+    The PDU address of the PDU SESSION ESTABLISHMENT ACCEPT is decoded by the type the network
+    selected: an IPv4 address, an IPv6 interface identifier, or both. A session with IPv6 forms
+    its address the way TS 23.501 clause 5.8.2.2.2 describes. On each
+    USER-DATA-PACKET-GENERATION-PROCEDURE, the UE sends a router solicitation through the tunnel
+    from fe80:: and the interface identifier. It sends the solicitation again every 4 seconds, up
+    to 3 times (RFC 4861). The address is the /64 of the router advertisement and the interface
+    identifier. When no advertisement answers, an earlier unsolicited one is used, and with none
+    the procedure fails. The echo requests then go to each family in turn, IPv4 first, and the
+    procedure passes when every one has been answered. With `dataPktInterval` set, each interval
+    sends one echo request of each family.
+
 ## Description of Each Profile
 
 Currently following profiles are supported :

@@ -7,6 +7,7 @@ package context
 import (
 	"net"
 	"sync"
+	"time"
 
 	"github.com/omec-project/gnbsim/common"
 	"github.com/omec-project/gnbsim/logger"
@@ -27,9 +28,19 @@ type PduSession struct {
 	GenStop          chan struct{}
 	WriteGnbChan     chan common.InterfaceMessage
 	DefaultAs        string
+	DefaultAsV6      string // the destination of the IPv6 echo requests
 	PduSessType      models.PduSessionType
-	PduAddress       net.IP // the IPv4 address of an IPv4 or IPv4v6 session
-	Ipv6InterfaceId  []byte // the 8-octet IPv6 interface identifier of an IPv6 or IPv4v6 session
+	RsTimer          *time.Timer // retransmits the router solicitation of a data request
+	PduAddress       net.IP      // the IPv4 address of an IPv4 or IPv4v6 session
+	Ipv6InterfaceId  []byte      // the 8-octet IPv6 interface identifier of an IPv6 or IPv4v6 session
+	Ipv6Prefix       net.IP      // the /64 of the last usable router advertisement
+	PingFamilies     []string    // the address families of one-off echo requests, pinged in turn
+	Ipv6Address      net.IP      // the UE's IPv6 address: Ipv6Prefix and Ipv6InterfaceId
+	RsSent           int         // router solicitations sent for the current data request
+	RaReceived       int         // usable router advertisements
+	RaSolicited      int         // of them, those sent to the UE's link-local address: answers to an RS
+	PingPhase        int         // index in PingFamilies of the family being pinged
+	PhaseTxCount     int         // echo requests sent in the current phase
 	GenWg            sync.WaitGroup
 	PktCount         int
 	SeqNum           int
@@ -41,6 +52,7 @@ type PduSession struct {
 	SscMode          uint8
 	LastDataPktRecvd bool
 	Launched         bool
+	DataPending      bool // a data request waits for a router advertisement
 	PendingPTI       uint8
 }
 

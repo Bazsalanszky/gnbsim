@@ -24,6 +24,9 @@ func HandleEvents(pduSess *realuectx.PduSession) {
 		/* Reading Down link packets from gNb*/
 		case msg := <-pduSess.ReadDlChan:
 			err = HandleDlMessage(pduSess, msg)
+		/* Retransmitting the router solicitation of a data request on an IPv6 session */
+		case <-rsTimerChan(pduSess):
+			err = HandleRsTimeout(pduSess)
 		/* Reading commands from RealUE control plane*/
 		case msg := <-pduSess.ReadCmdChan:
 			event := msg.GetEventType()

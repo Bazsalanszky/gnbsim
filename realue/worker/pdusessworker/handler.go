@@ -25,7 +25,14 @@ const (
 	  however it later converts it into number of 32 bit words
 	*/
 	IPV4_MIN_HEADER_LEN int = 20
+
+	// echoID is the ICMP identifier of the echo requests of both families
+	echoID = 12394
 )
+
+// echoPayload is the data of every echo request: a timestamp-like start and the 0x10 to 0x37 count
+// of the ping utility.
+const echoPayload = "8c870d0000000000101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334353637"
 
 // lastPktWaitTimeout bounds how long a quitting session waits for the gNB's last data packet.
 var lastPktWaitTimeout = 10 * time.Second
@@ -76,7 +83,7 @@ func sendIcmpEchoRequest(pduSess *realuectx.PduSession, stop <-chan struct{}) (e
 	}
 	pduSess.Log.Debugln("sending UL ICMP ping message")
 
-	icmpPayload, err := hex.DecodeString("8c870d0000000000101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334353637")
+	icmpPayload, err := hex.DecodeString(echoPayload)
 	if err != nil {
 		pduSess.Log.Errorln("failed to decode icmp hexString ")
 		return err
@@ -107,7 +114,7 @@ func sendIcmpEchoRequest(pduSess *realuectx.PduSession, stop <-chan struct{}) (e
 	icmpMsg := icmp.Message{
 		Type: ipv4.ICMPTypeEcho, Code: 0,
 		Body: &icmp.Echo{
-			ID: 12394, Seq: pduSess.GetNextSeqNum(),
+			ID: echoID, Seq: pduSess.GetNextSeqNum(),
 			Data: icmpPayload,
 		},
 	}
@@ -119,6 +126,19 @@ func sendIcmpEchoRequest(pduSess *realuectx.PduSession, stop <-chan struct{}) (e
 
 	payload := append(v4HdrBuf, b...)
 
+	if err := sendUplink(pduSess, payload, stop); err != nil {
+		return err
+	}
+	pduSess.TxDataPktCount++
+
+	pduSess.Log.Debugln("sent UL ICMP ping message")
+
+	return nil
+}
+
+// sendUplink hands an uplink packet to the gNB. A send that is blocked gives way to stop; a nil
+// stop is never ready.
+func sendUplink(pduSess *realuectx.PduSession, payload []byte, stop <-chan struct{}) error {
 	userDataMsg := &common.UserDataMessage{}
 	userDataMsg.Event = common.UL_UE_DATA_TRANSFER_EVENT
 	userDataMsg.Payload = payload
@@ -138,10 +158,6 @@ func sendIcmpEchoRequest(pduSess *realuectx.PduSession, stop <-chan struct{}) (e
 	case <-timeout:
 		return fmt.Errorf("the gNB is not reading the uplink of pdu session %d", pduSess.PduSessId)
 	}
-	pduSess.TxDataPktCount++
-
-	pduSess.Log.Debugln("sent UL ICMP ping message")
-
 	return nil
 }
 
@@ -164,6 +180,10 @@ func HandleIcmpMessage(pduSess *realuectx.PduSession,
 			echpReply.ID, echpReply.Seq)
 
 		pduSess.RxDataPktCount++
+		// a session with IPv6 pings each of its address families in turn
+		if hasIPv6(pduSess) {
+			return echoReplied(pduSess, familyIPv4)
+		}
 		if pduSess.ReqDataPktInt == 0 {
 			if pduSess.TxDataPktCount < pduSess.ReqDataPktCount {
 				err := SendIcmpEchoRequest(pduSess)
@@ -201,6 +221,14 @@ func HandleDlMessage(pduSess *realuectx.PduSession,
 		pduSess.Log.Infoln("received QFI value in downlink user data packet:", *dataMsg.Qfi)
 	}
 
+	// IPv6 packets reach only a session with IPv6: the UPF has no IPv6 address to route to another
+	if len(dataMsg.Payload) > 0 && dataMsg.Payload[0]>>4 == 6 {
+		if !hasIPv6(pduSess) {
+			return fmt.Errorf("IPv6 packet on pdu session %d, which has no IPv6", pduSess.PduSessId)
+		}
+		return handleIPv6Packet(pduSess, dataMsg.Payload)
+	}
+
 	ipv4Hdr, err := ipv4.ParseHeader(dataMsg.Payload)
 	if err != nil {
 		return fmt.Errorf("failed to parse ipv4 header:%v", err)
@@ -235,6 +263,11 @@ func HandleDataPktGenRequestEvent(pduSess *realuectx.PduSession,
 	pduSess.ReqDataPktCount = cmd.UserDataPktCount
 	pduSess.ReqDataPktInt = cmd.UserDataPktInterval
 	pduSess.DefaultAs = cmd.DefaultAs
+	// a session with IPv6 first learns its prefix from a router advertisement
+	if hasIPv6(pduSess) {
+		pduSess.DefaultAsV6 = cmd.DefaultAsV6
+		return requestIPv6Data(pduSess)
+	}
 	if pduSess.ReqDataPktInt == 0 {
 		err = SendIcmpEchoRequest(pduSess)
 		if err != nil {
@@ -271,6 +304,8 @@ func HandleDataPktGenRequestEvent(pduSess *realuectx.PduSession,
 // stopGenerator stops the packet generator of the session, if there is one, and waits until it
 // has returned, so that it is gone before the channels it sends on are cleared.
 func stopGenerator(pduSess *realuectx.PduSession) {
+	// a data request that waits for a router advertisement is given up with the generator
+	stopRouterSolicitation(pduSess)
 	if pduSess.GenStop != nil {
 		close(pduSess.GenStop)
 		pduSess.GenStop = nil
