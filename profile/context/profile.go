@@ -123,6 +123,7 @@ type Profile struct {
 	StartIteration               string         `yaml:"startiteration" json:"startiteration"`
 	Key                          string         `yaml:"key" json:"key"`
 	DefaultAs                    string         `yaml:"defaultAs" json:"defaultAs"`
+	DefaultAsV6                  string         `yaml:"defaultAsV6" json:"defaultAsV6"`
 	StartImsi                    string         `yaml:"startImsi" json:"startImsi"`
 	TargetGnbName                string         `yaml:"targetGnbName" json:"targetGnbName"`
 	Opc                          string         `yaml:"opc" json:"opc"`
@@ -415,6 +416,9 @@ func (profile *Profile) Init() error {
 		return typeErr
 	}
 	profile.NasPduSessionType = sessionType
+	if err := validateDefaultAsV6(profile); err != nil {
+		return err
+	}
 
 	if profile.UeCount < 0 {
 		return fmt.Errorf("ueCount must not be negative, got %d", profile.UeCount)

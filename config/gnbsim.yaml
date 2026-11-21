@@ -153,6 +153,7 @@ configuration:
       sequenceNumber: "16f3b3f70fc2"
       dnn: "internet"
       # pduSessionType: IPv4 # IPv4 (default), IPv6 or IPv4v6; Ethernet and Unstructured only to test a reject
+      # defaultAsV6: "2001:db8::1" # IPv6 icmp pkt destination, needed by IPv6 and IPv4v6 sessions
       sNssai:
         sst: 1 # Slice/Service Type (unsigned integer, range: 0~255)
         sd: "010203" # Slice Differentiator (3 bytes hex string, range: 000000~FFFFFF)

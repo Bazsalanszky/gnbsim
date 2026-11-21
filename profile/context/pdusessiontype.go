@@ -6,6 +6,7 @@ package context
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/omec-project/nas/v2/nasMessage"
@@ -32,4 +33,25 @@ func ParsePduSessionType(option string) (uint8, error) {
 		return value, nil
 	}
 	return 0, fmt.Errorf("pduSessionType %q, want IPv4, IPv6, IPv4v6, Unstructured or Ethernet", option)
+}
+
+// sessionHasIPv6 tells whether a PDU session of the NAS type carries IPv6.
+func sessionHasIPv6(sessionType uint8) bool {
+	return sessionType == nasMessage.PDUSessionTypeIPv6 || sessionType == nasMessage.PDUSessionTypeIPv4IPv6
+}
+
+// validateDefaultAsV6 checks the defaultAsV6 option, the destination of the IPv6 echo requests. A
+// session with IPv6 needs it: there is no address to default to, as there is for defaultAs.
+func validateDefaultAsV6(profile *Profile) error {
+	if profile.DefaultAsV6 == "" {
+		if sessionHasIPv6(profile.NasPduSessionType) {
+			return fmt.Errorf("pduSessionType %s needs defaultAsV6, the destination of the IPv6 echo requests",
+				profile.PduSessionType)
+		}
+		return nil
+	}
+	if ip := net.ParseIP(profile.DefaultAsV6); ip == nil || ip.To4() != nil {
+		return fmt.Errorf("defaultAsV6 must be an IPv6 address, got %q", profile.DefaultAsV6)
+	}
+	return nil
 }
