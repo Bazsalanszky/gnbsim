@@ -229,6 +229,9 @@ func HandlePduSessEstAcceptEvent(ue *simuectx.SimUe,
 	intfcMsg common.InterfaceMessage,
 ) (err error) {
 	msg := intfcMsg.(*common.UeMessage)
+	if want := ue.ProfileCtx.PduSessionRejectCause; want != 0 {
+		return fmt.Errorf("PDU session establishment accepted, want a reject with 5GSM cause %d", want)
+	}
 	err = ue.ProfileCtx.CheckCurrentEvent(ue.Procedure, common.PDU_SESS_EST_REQUEST_EVENT, msg.Event)
 	if err != nil {
 		ue.Log.Errorln("CheckCurrentEvent returned:", err)
@@ -248,6 +251,20 @@ func HandlePduSessEstAcceptEvent(ue *simuectx.SimUe,
 func HandlePduSessEstRejectEvent(ue *simuectx.SimUe,
 	intfcMsg common.InterfaceMessage,
 ) (err error) {
+	cause, err := pduSessEstRejectCause(intfcMsg)
+	if err != nil {
+		return err
+	}
+	ue.Log.Infof("PDU session establishment rejected, 5GSM cause %d", cause)
+	// a profile that tests how the network refuses a session expects the reject, with its cause
+	if want := ue.ProfileCtx.PduSessionRejectCause; want != 0 {
+		if cause != want {
+			return fmt.Errorf("PDU session establishment rejected with 5GSM cause %d, want %d", cause, want)
+		}
+		SendProcedureResult(ue)
+		return nil
+	}
+
 	err = ue.ProfileCtx.CheckCurrentEvent(ue.Procedure, common.PDU_SESS_EST_REQUEST_EVENT,
 		intfcMsg.GetEventType())
 	if err != nil {
@@ -972,4 +989,14 @@ func HandleHandoverCommandEvent(ue *simuectx.SimUe, intfcMsg common.InterfaceMes
 	notifyMsg.Event = common.HO_NOTIFY_EVENT
 	SendToGnbUe(ue, notifyMsg)
 	return nil
+}
+
+// pduSessEstRejectCause is the 5GSM cause of a PDU SESSION ESTABLISHMENT REJECT.
+func pduSessEstRejectCause(intfcMsg common.InterfaceMessage) (uint8, error) {
+	msg, ok := intfcMsg.(*common.UeMessage)
+	if !ok || msg.NasMsg == nil || msg.NasMsg.GsmMessage == nil ||
+		msg.NasMsg.PDUSessionEstablishmentReject == nil {
+		return 0, fmt.Errorf("PDU session establishment reject without the NAS message")
+	}
+	return msg.NasMsg.PDUSessionEstablishmentReject.GetCauseValue(), nil
 }

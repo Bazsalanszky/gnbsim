@@ -144,6 +144,9 @@ type Profile struct {
 	ModificationRequestType      uint8        `yaml:"modificationRequestType" json:"modificationRequestType"`
 	NasPduSessionType            uint8        `yaml:"-" json:"-"` // PduSessionType as the NAS value, set by Init
 	OmitModificationRequestType  bool         `yaml:"omitModificationRequestType" json:"omitModificationRequestType"`
+	// PduSessionRejectCause is the 5GSM cause the network must reject the PDU session
+	// establishment with. Zero, the default, expects an accept.
+	PduSessionRejectCause uint8 `yaml:"pduSessionRejectCause" json:"pduSessionRejectCause"`
 }
 
 func init() {
