@@ -12,13 +12,18 @@ package factory
 
 import (
 	"fmt"
+	"net"
 	"os"
+	"strings"
 
 	gnbctx "github.com/omec-project/gnbsim/gnodeb/context"
 	profctx "github.com/omec-project/gnbsim/profile/context"
 )
 
 const (
+	// podIPKeyword in an address option stands for the pod's own address (POD_IP, POD_IPS)
+	podIPKeyword = "POD_IP"
+
 	GNBSIM_EXPECTED_CONFIG_VERSION = "1.0.0"
 	GNBSIM_DEFAULT_CONFIG_PATH     = "/gnbsim/config/gnb.conf"
 )
@@ -85,7 +90,7 @@ func (c *Config) Validate() (err error) {
 		}
 	}
 
-	if c.Configuration.Server.IpAddr == "POD_IP" {
+	if c.Configuration.Server.IpAddr == podIPKeyword {
 		podIP := os.Getenv("POD_IP")
 		if podIP == "" && c.Configuration.Server.Enable {
 			// an empty address would make the listener bind to every interface
@@ -95,10 +100,26 @@ func (c *Config) Validate() (err error) {
 	}
 
 	if c.Configuration.SingleInterface {
+		podIPv4, podIPv6 := podAddresses()
 		for _, gnb := range c.Configuration.Gnbs {
-			if gnb.GnbN3Ip == "POD_IP" {
-				gnb.GnbN3Ip = os.Getenv("POD_IP")
+			if gnb.GnbN3Ip == podIPKeyword {
+				// the IPv4 address for compatibility, the IPv6 one on an IPv6-only pod
+				gnb.GnbN3Ip = podIPv4
+				if gnb.GnbN3Ip == "" {
+					gnb.GnbN3Ip = podIPv6
+				}
 			}
+			if gnb.GnbN3Ipv6 == podIPKeyword {
+				gnb.GnbN3Ipv6 = podIPv6
+				if gnb.GnbN3Ip == podIPv6 {
+					gnb.GnbN3Ipv6 = "" // an IPv6-only pod: n3IpAddr has it already
+				}
+			}
+		}
+	}
+	for name, gnb := range c.Configuration.Gnbs {
+		if err := gnb.ValidateN3(); err != nil {
+			return fmt.Errorf("gnbs.%s: %w", name, err)
 		}
 	}
 
@@ -128,4 +149,27 @@ func (c *Configuration) GetGNodeB(name string) (*gnbctx.GNodeB, error) {
 		err = fmt.Errorf("no corresponding gNodeB found for:%v", name)
 	}
 	return gnb, err
+}
+
+// podAddresses returns the pod's first IPv4 and first IPv6 address, "" for a family it has none of.
+// They come from POD_IPS (status.podIPs: the pod's addresses, comma-separated, one per family on a
+// dual-stack cluster), or from POD_IP (status.podIP, the primary family only) without it.
+func podAddresses() (ipv4, ipv6 string) {
+	list := os.Getenv("POD_IPS")
+	if strings.TrimSpace(list) == "" {
+		list = os.Getenv("POD_IP")
+	}
+	for _, field := range strings.Split(list, ",") {
+		ip := net.ParseIP(strings.TrimSpace(field))
+		switch {
+		case ip == nil:
+		case ip.To4() != nil:
+			if ipv4 == "" {
+				ipv4 = ip.String()
+			}
+		case ipv6 == "":
+			ipv6 = ip.String()
+		}
+	}
+	return ipv4, ipv6
 }
