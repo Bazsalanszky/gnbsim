@@ -96,6 +96,12 @@ Following is example of override values
                 gnbs: # pool of gNodeBs
                   gnb1:
                     n3IpAddr: "POD_IP" # set if singleInterface is true
+                    # n3Ipv6Addr: "POD_IP" # dual-stack pod: also use its IPv6 address on N3
+
+`POD_IP` is taken from the `POD_IPS` environment variable (`status.podIPs`, comma-separated) when it is
+set, else from `POD_IP`: `n3IpAddr` gets the pod's IPv4 address (its IPv6 one on an IPv6-only pod), and
+`n3Ipv6Addr` its IPv6 address. With both, the gNB answers an IPv4v6 (160-bit) UPF address with the
+family of `n3PreferredFamily` (default `ipv4`).
 
 
 

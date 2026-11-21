@@ -723,9 +723,9 @@ func HandleHandoverRequest(gnbue *gnbctx.GnbCpUe, intfcMsg common.InterfaceMessa
 				continue
 			}
 			ulteid := binary.BigEndian.Uint32(gtpTunnel.GTPTEID.Value)
-			upfIp, _ := ngapconv.IPAddressToString(gtpTunnel.TransportLayerAddress)
-			if upfIp == "" {
-				gnbue.Log.Errorln("failed to resolve UPF IP address, skipping PDU session")
+			upfIp, gnbN3Ip, err := gnbue.Gnb.SelectN3Tunnel(ngapconv.IPAddressToString(gtpTunnel.TransportLayerAddress))
+			if err != nil {
+				gnbue.Log.Errorln("N3 tunnel:", err, ", skipping PDU session")
 				continue
 			}
 			dlteid, err := gnbue.Gnb.DlTeidGenerator.Allocate()
@@ -740,6 +740,7 @@ func HandleHandoverRequest(gnbue *gnbctx.GnbCpUe, intfcMsg common.InterfaceMessa
 			pduSess := &ngapTestpacket.PduSession{}
 			pduSess.PduSessId = gnbupue.PduSessId
 			pduSess.Teid = gnbupue.DlTeid
+			pduSess.GnbN3Ip = gnbN3Ip
 			pduSess.Success = true
 
 			if qosFlowSetupReqList != nil {
@@ -898,9 +899,9 @@ func setupPduSession(gnbue *gnbctx.GnbCpUe, item pduSessResourceSetupItem) (dbPa
 	if len(gtpTunnel.GTPTEID.Value) != 4 {
 		return nil, fmt.Errorf("unexpected GTPTEID length %d", len(gtpTunnel.GTPTEID.Value))
 	}
-	upfIp, _ := ngapconv.IPAddressToString(gtpTunnel.TransportLayerAddress)
-	if upfIp == "" {
-		return nil, errors.New("failed to resolve UPF IP address")
+	upfIp, gnbN3Ip, err := gnbue.Gnb.SelectN3Tunnel(ngapconv.IPAddressToString(gtpTunnel.TransportLayerAddress))
+	if err != nil {
+		return nil, fmt.Errorf("N3 tunnel: %w", err)
 	}
 	ulteid := binary.BigEndian.Uint32(gtpTunnel.GTPTEID.Value)
 	dlteid, err := gnbue.Gnb.DlTeidGenerator.Allocate()
@@ -924,6 +925,7 @@ func setupPduSession(gnbue *gnbctx.GnbCpUe, item pduSessResourceSetupItem) (dbPa
 	pduSess := &ngapTestpacket.PduSession{}
 	pduSess.PduSessId = gnbupue.PduSessId
 	pduSess.Teid = gnbupue.DlTeid
+	pduSess.GnbN3Ip = gnbN3Ip
 
 	gnbue.Log.Infoln("PDU Session ID:", gnbupue.PduSessId)
 	gnbue.Log.Infoln("S-NSSAI - SST: ", gnbupue.Snssai.GetSst())
@@ -931,6 +933,7 @@ func setupPduSession(gnbue *gnbctx.GnbCpUe, item pduSessResourceSetupItem) (dbPa
 	gnbue.Log.Infoln("UL GTP-TEID: ", ulteid)
 	gnbue.Log.Infoln("DL GTP-TEID: ", dlteid)
 	gnbue.Log.Infoln("UPF Endpoint IP: ", upfIp)
+	gnbue.Log.Infoln("gNB N3 IP: ", gnbN3Ip)
 	gnbue.Log.Infoln("PDU Session Type: ", gnbupue.PduSessType)
 
 	var qosFlowId int64
