@@ -117,6 +117,9 @@ type UeMessage struct {
 	// default destination of data pkt
 	DefaultAs string
 
+	// destination of the IPv6 data pkts of an IPv6 or IPv4v6 PDU session
+	DefaultAsV6 string
+
 	// Number of user data packets to be generated as directed by profile
 	UserDataPktCount int
 

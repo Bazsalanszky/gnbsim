@@ -875,6 +875,7 @@ func HandleProcedure(ue *simuectx.SimUe) {
 		msg.UserDataPktCount = ue.ProfileCtx.DataPktCount
 		msg.UserDataPktInterval = ue.ProfileCtx.DataPktInt
 		msg.DefaultAs = ue.ProfileCtx.DefaultAs
+		msg.DefaultAsV6 = ue.ProfileCtx.DefaultAsV6
 		msg.Event = common.DATA_PKT_GEN_REQUEST_EVENT
 
 		/* TODO: Solve timing issue. Currently UE may start sending user data

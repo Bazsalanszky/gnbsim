@@ -7,7 +7,6 @@ package realue
 import (
 	"errors"
 	"fmt"
-	"net"
 	"strconv"
 
 	"github.com/omec-project/gnbsim/common"
@@ -21,7 +20,6 @@ import (
 	"github.com/omec-project/nas/v2/nasMessage"
 	"github.com/omec-project/nas/v2/nasTestpacket"
 	"github.com/omec-project/nas/v2/nasType"
-	"github.com/omec-project/openapi/v2/models"
 )
 
 // TODO Remove the hardcoding
@@ -213,8 +211,8 @@ func HandlePduSessEstRequestEvent(ue *realuectx.RealUe,
 	// 	Sst: 1,
 	// 	Sd:  "010203",
 	// }
-	nasPdu, err := realue_nas.GetUlNasTransportPduSessionEstablishmentRequest(10,
-		nasMessage.ULNASTransportRequestTypeInitialRequest, ue.Dnn, ue.SNssai)
+	nasPdu, err := realue_nas.GetUlNasTransportPduSessionEstablishmentRequestWithType(10,
+		nasMessage.ULNASTransportRequestTypeInitialRequest, ue.Dnn, ue.SNssai, ue.RequestedPduSessionType())
 	if err != nil {
 		return fmt.Errorf("build PDU session establishment request: %w", err)
 	}
@@ -241,23 +239,31 @@ func HandlePduSessEstAcceptEvent(ue *realuectx.RealUe,
 		return fmt.Errorf("invalid NAS Message")
 	}
 
-	var pduAddr net.IP
-	pduSessType := nasconv.PDUSessionTypeToModels(nasMsg.GetPDUSessionType())
-	if pduSessType == models.PDUSESSIONTYPE_IPV4 {
-		ip := nasMsg.GetPDUAddressInformation()
-		pduAddr = net.IPv4(ip[0], ip[1], ip[2], ip[3])
+	selectedType := nasMsg.GetPDUSessionType()
+	pduSessType := nasconv.PDUSessionTypeToModels(selectedType)
+	pduAddr, interfaceID, err := decodePduAddress(selectedType, nasMsg.PDUAddress)
+	if err != nil {
+		return fmt.Errorf("PDU Session Establishment Accept: %w", err)
+	}
+	if requested := ue.RequestedPduSessionType(); selectedType != requested {
+		// TS 24.501 6.4.1.3: the network may select another type than requested, e.g. IPv4 for IPv4v6
+		ue.Log.Warnf("requested PDU session type %d, the network selected %d", requested, selectedType)
 	}
 
 	pduSess := realuectx.NewPduSession(ue, int64(nasMsg.PDUSessionID.Octet))
 	pduSess.PduSessType = pduSessType
 	pduSess.SscMode = nasMsg.GetSSCMode()
 	pduSess.PduAddress = pduAddr
+	pduSess.Ipv6InterfaceId = interfaceID
 	pduSess.WriteUeChan = ue.ReadChan
 	ue.AddPduSession(pduSess.PduSessId, pduSess)
 	ue.Log.Infoln("PDU Session ID:", pduSess.PduSessId)
 	ue.Log.Infoln("PDU Session Type:", pduSess.PduSessType)
 	ue.Log.Infoln("SSC Mode:", pduSess.SscMode)
 	ue.Log.Infoln("PDU Address:", pduAddr.String())
+	if interfaceID != nil {
+		ue.Log.Infoln("IPv6 Interface Identifier:", formatInterfaceID(interfaceID))
+	}
 
 	e := &stats.StatisticsEvent{Supi: ue.Supi, EType: stats.PDU_SESS_ACC_IN, Id: msg.Id}
 	stats.LogStats(e)

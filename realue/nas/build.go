@@ -44,7 +44,17 @@ func GetServiceRequest(ue *realuectx.RealUe) ([]byte, error) {
 func GetUlNasTransportPduSessionEstablishmentRequest(pduSessionID uint8, requestType uint8,
 	dnn string, snssai *models.Snssai,
 ) ([]byte, error) {
-	payload := nasTestpacket.GetPduSessionEstablishmentRequest(pduSessionID)
+	return GetUlNasTransportPduSessionEstablishmentRequestWithType(pduSessionID, requestType, dnn, snssai,
+		nasMessage.PDUSessionTypeIPv4)
+}
+
+// GetUlNasTransportPduSessionEstablishmentRequestWithType is
+// GetUlNasTransportPduSessionEstablishmentRequest for the given PDU session type value
+// (nasMessage.PDUSessionTypeIPv4, PDUSessionTypeIPv6, ...).
+func GetUlNasTransportPduSessionEstablishmentRequestWithType(pduSessionID uint8, requestType uint8,
+	dnn string, snssai *models.Snssai, pduSessionType uint8,
+) ([]byte, error) {
+	payload := nasTestpacket.GetPduSessionEstablishmentRequestWithType(pduSessionID, pduSessionType)
 
 	m := nas.NewMessage()
 	m.GmmMessage = nas.NewGmmMessage()
